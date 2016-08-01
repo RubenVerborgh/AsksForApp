@@ -1,0 +1,53 @@
+#!/usr/bin/env node
+var http = require('http');
+
+// Parse arguments
+var args = process.argv.slice(2),
+    url = args[0];
+if (args.length !== 1) {
+  console.error('Usage:\n  crawl-alexa http://www.alexa.com/topsites/global');
+  process.exit(1);
+}
+
+// Process the page given as an argument
+processPage(url);
+
+// Processes the given Alexa page
+function processPage(url) {
+  fetch(url).then((html) => {
+    var sites = extractSites(html),
+        nextUrl = extractNextUrl(html);
+    sites.forEach((site) => console.log(site));
+    if (sites.length && nextUrl)
+      processPage(nextUrl);
+  });
+}
+
+// Fetches the page and return its body
+function fetch(url) {
+  var body = '';
+  return new Promise(function (resolve, reject) {
+    http.get(url, (response) => {
+      response.on('data', (data) => body += data);
+      response.on('end', () => resolve(body));
+      response.on('error', reject);
+    });
+  });
+}
+
+// Extracts the top sites from the page
+function extractSites(html) {
+  var urls = [], match,
+      search = /<a href="\/siteinfo\/[^"]*">([^<\/]+)([^<]*)<\/a>/g;
+  while (match = search.exec(html)) {
+    var domain = match[1].toLowerCase(), path = match[2] || '/';
+    urls.push((/:/.test(domain) ? '' : 'http://') + domain + path);
+  }
+  return urls;
+}
+
+// Extracts the URL of the next page
+function extractNextUrl(html) {
+  var match = html.match(/<a href="(\/topsites[^"]+)"\s+class="next"/);
+  return match ? 'http://www.alexa.com' + match[1] : '';
+}
