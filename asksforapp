@@ -1,0 +1,45 @@
+#!/usr/bin/env phantomjs
+var USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1';
+var APP_SIGNATURE = /apple-itunes-app|itunes.apple.com\S+app_id=|\bthe app\b|\b(mobile|native|iPhone|iOS|Android) app\b/i;
+var SCREEN_SIZE = { width: 375, height: 667 }
+var SKIPPED_RESOURCE = /\.(css|jpg|png|gif|woff2?)$/
+
+var webPage = require('webpage'),
+    system = require('system');
+
+// Check all URLs passed as arguments
+var urls = system.args.slice(1);
+(function next() {
+  if (urls.length)
+    check(urls.shift(), next);
+  else
+    phantom.exit();
+})();
+
+// Check the given URL
+function check(url, done) {
+  var page = webPage.create();
+  page.viewportSize = SCREEN_SIZE;
+  page.settings.userAgent = USER_AGENT;
+  page.settings.loadImages = false;
+  page.settings.resourceTimeout = 10000;
+
+  // Ignore in-page errors
+  page.onError = function() {};
+
+  // Ignore non-relevant resources
+  page.onResourceRequested = function(requestData, networkRequest) {
+    if (SKIPPED_RESOURCE.test(requestData.url))
+      networkRequest.cancel();
+  };
+
+  // Open the page and inspect its source
+  page.open(url, function (status) {
+    var asksForApp;
+    if (status === 'success')
+      asksForApp = APP_SIGNATURE.test(page.content);
+    console.log(url + '\t' + asksForApp);
+    page.close();
+    done();
+  });
+}
