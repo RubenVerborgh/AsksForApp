@@ -24,18 +24,21 @@ function check(url, done) {
   page.viewportSize = SCREEN_SIZE;
   page.settings.loadImages = false;
   page.settings.resourceTimeout = 10000;
-  page.customHeaders = {
-    'Accept-Language': ACCEPT_LANGUAGE,
-    'User-Agent': USER_AGENT,
-  };
+  page.customHeaders = getHeaders(url);
 
   // Ignore in-page errors
   page.onError = function() {};
 
-  // Ignore non-relevant resources
-  page.onResourceRequested = function(requestData, networkRequest) {
+  // Handle subresources
+  page.onResourceRequested = function (requestData, request) {
+    // Set correct headers
+    var headers = getHeaders(requestData.url);
+    for (var header in headers)
+      request.setHeader(header, headers[header]);
+
+    // Ignore non-relevant resources
     if (SKIPPED_RESOURCE.test(requestData.url))
-      networkRequest.cancel();
+      request.cancel();
   };
 
   // Open the page and inspect its source
@@ -47,4 +50,13 @@ function check(url, done) {
     page.close();
     done();
   });
+}
+
+// Gets the headers for the given URL
+function getHeaders(url) {
+  return {
+    'Host': url.match(/[^\/.]+\.[^\/]+/)[0],
+    'Accept-Language': ACCEPT_LANGUAGE,
+    'User-Agent': USER_AGENT,
+  };
 }
