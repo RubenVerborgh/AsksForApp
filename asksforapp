@@ -22,10 +22,12 @@ function check(url, done) {
   // Initialize page
   var page = webPage.create();
   page.viewportSize = SCREEN_SIZE;
-  page.settings.userAgent = USER_AGENT;
   page.settings.loadImages = false;
   page.settings.resourceTimeout = 10000;
-  page.customHeaders = { 'Accept-Language': ACCEPT_LANGUAGE };
+  page.customHeaders = {
+    'Accept-Language': ACCEPT_LANGUAGE,
+    'User-Agent': USER_AGENT,
+  };
 
   // Ignore in-page errors
   page.onError = function() {};
