@@ -1,0 +1,35 @@
+#!/usr/bin/env node
+var fs = require('fs');
+
+var PRECEDENCE = ['true', 'false', 'undefined', 'error'];
+
+// Extract arguments
+var files = process.argv.slice(2);
+if (!files.length) {
+  console.error('Usage:\n  merge-results base.log [results1.log …]');
+  process.exit(1);
+}
+
+// Merge the results per site across all files
+var results = {};
+var sitesPerFile = files.map(function (filename) {
+  var file = fs.readFileSync(filename, { encoding: 'utf8' });
+  return file.trim().split(/\n/).map(function (line) {
+    var split = line.split(/\t/), site = split[0], result = split[1];
+    results[site] = merge(results[site], result);
+    return site;
+  });
+});
+
+// For each of the sites in the first file, write the merged result
+sitesPerFile[0].forEach(function (site) {
+  console.log(site + '\t' + results[site]);
+});
+
+// Merges two values for a site
+function merge(a, b) {
+  // Higher precedence levels have absolute priority over lower levels
+  for (var i = 0; i < PRECEDENCE.length; i++)
+    if (a === PRECEDENCE[i] || b === PRECEDENCE[i])
+      return PRECEDENCE[i];
+}
